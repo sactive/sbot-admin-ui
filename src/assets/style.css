@@ -1,0 +1,52 @@
+/*
+.header {
+    height: 48px;
+    line-height: 48px;
+    background: #0079ef;
+    color: #ffffff;
+}
+.header-title {
+    padding: 0 32px;
+    float: left;
+    color: #ffffff;
+    font-size: 18px;
+    font-weight: bold;
+}
+.root-panel {
+    margin-top: 48px;
+}*/
+
+.header {
+    background: #0079ef;
+    color: #ffffff;
+}
+
+.header-title {
+    float: left;
+    color: #ffffff;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.botconfig-content {
+    text-align: center;
+    margin-top: 48px;
+    padding-bottom: 48px;
+}
+
+.botconfig-volume {
+    margin-top: 48px;
+    padding-bottom: 48px;
+}
+
+.botconfig-radio-label {
+    margin-left: 16px;
+}
+
+
+.fade-enter-active, .fade-leave-active {
+    transition: opacity .5s;
+}
+.fade-enter, .fade-leave-to /* .fade-leave-active below version 2.1.8 */ {
+    opacity: 0;
+}
