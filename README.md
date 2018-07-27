@@ -1,4 +1,4 @@
-# sbot-admin-view
+# sbot-admin-ui
 
 ## Sbot Admin UI Build Setup
 
