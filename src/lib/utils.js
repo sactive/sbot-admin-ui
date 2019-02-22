@@ -4,9 +4,9 @@ import extend from "extend";
 const Util = {};
 
 
-//basic config
+// basic config
+// todo set timeout: 30 * 1000
 Util.fetch = axios.create({
-  timeout: 30 * 1000,
   responseType: "blob" // force blob at the beginning, anyway
 });
 

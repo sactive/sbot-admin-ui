@@ -26,7 +26,11 @@
         <div v-else>
             <h4><strong>Set up {{showPlatForm}} environment variables</strong></h4>
             <form class="form-horizontal ng-pristine ng-valid botconfig-content">
-                <bot-input v-for="(item, index) in forms[platformPicked]"
+                <div v-show="platformPicked === 'slack'">
+                    <bot-radio elementId="slackauthoptions" :checked="currentChecked" title="How to authorize:" :options="radioOptions" @updateCheck="handleCheck"></bot-radio>
+                    <hr />
+                </div>
+                <bot-input v-for="(item, index) in forms[platformPicked]" v-if="item.type !== 'dropdown' && !item.authType"
                            :elementId="index"
                            :name="inputPrefix + index"
                            :title="item.title"
@@ -39,6 +43,27 @@
                            @input="handleInput(index, $event)"
                            :key="index">
                 </bot-input>
+                <bot-input v-for="(item, index) in forms[platformPicked]" v-if="item.type !== 'dropdown' && item.authType === currentChecked"
+                           :elementId="index"
+                           :name="inputPrefix + index"
+                           :title="item.title"
+                           :tip="item.tip"
+                           :test="item.test"
+                           :type="item.type"
+                           :required="item.required"
+                           :placeholder="item.placeholder"
+                           :value="item.value"
+                           @input="handleInput(index, $event)"
+                           :key="index">
+                </bot-input>
+                <bot-dropdown v-for="(item, index) in forms[platformPicked]" v-if="item.type === 'dropdown' && !item.authType"
+                              :elementId="index"
+                              :options="item.options"
+                              :selected="item.selected"
+                              :title="item.title"
+                              @updateOption="handleSelect(index, $event)"
+                              :key="index">
+                </bot-dropdown>
             </form>
         </div>
     </div>
@@ -46,10 +71,12 @@
 
 <script>
   import BotInput from '../components/BotInput.vue';
-
+  import BotDropdown from '../components/BotDropdown.vue';
+  import BotRadio from '../components/BotRadio.vue';
+  import utils from '../lib/utils';
   export default {
     name: "bot-config",
-    components: { BotInput },
+    components: { BotInput, BotDropdown, BotRadio },
     props: {
       currentStep: {
         type: Number,
@@ -62,7 +89,12 @@
     },
     data: function () {
       return {
-        forms: this.$store.state.currentData.forms
+        forms: utils.clone(this.$store.state.currentData.forms),
+        radioOptions: [
+          {name: 'slackoauthoption', value: 'autologin', title: 'Auto OAuth'},
+          {name: 'slackoauthoption', value: 'accesstoken', title: 'OAuth Access Token'}
+        ],
+        currentChecked: this.$store.state.currentData.currentChecked
       };
     },
     methods: {
@@ -70,6 +102,15 @@
         let forms = this.forms;
         forms[this.platformPicked][index].value = event;
         this.$store.commit('updateCurrentData', {forms: forms});
+      },
+      handleSelect (index, event) {
+        let forms = this.forms;
+        forms[this.platformPicked][index].value = event.name;
+        this.$store.commit('updateCurrentData', {forms: forms});
+      },
+      handleCheck (event) {
+        this.currentChecked = event;
+        this.$store.commit('updateCurrentData', {currentChecked: event});
       }
     },
     computed: {

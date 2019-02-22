@@ -5,7 +5,7 @@ const mock = require('./mock');
 
 const config = {
   entry: {
-    app: './src/app',
+    app: ['babel-polyfill', './src/app']
   },
   output: {
     path: path.join(__dirname, '../dist'),
@@ -33,10 +33,7 @@ const config = {
       {
         test: /\.(jsx|js)$/,
         loader: 'babel-loader',
-        exclude: /node_modules/,
-        query: {
-          presets: ['es2015']
-        }
+        exclude: /node_modules/
       },
       {
         test: /\.css$/,

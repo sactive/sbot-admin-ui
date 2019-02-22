@@ -7,7 +7,7 @@
             </label>
         </div>
         <div class="col-sm-1"></div>
-        <div class="col-sm-6 controls">
+        <div class="col-sm-7 controls">
             <input :class="{'input-error': hasError, 'input-success': hasSuccess}"
                    :type="type"
                    :id="elementId"
@@ -26,7 +26,6 @@
                 {{helpMessage}}
             </div>
         </div>
-        <div class="col-sm-1"></div>
     </div>
 </template>
 
@@ -83,7 +82,7 @@
       test: {
         type: Function,
         default: function (value) {
-          if (this.required === "required" && value.trim() === "") {
+          if ((this.required === "required" || this.required === true) && value.trim() === "") {
             return {
               status: false,
               message: this.tip !== '' ? this.tip : `${this.name.toUpperCase()} is required.`
@@ -131,8 +130,15 @@
       handleValidate(value) {
         let self = this;
         let result = self.test(value);
-        if (self.required === "required") {
+        if (self.required === "required" || self.required === true) {
           self.isDisplay = true;
+        } else {
+          self.isDisplay = false;
+          self.hasError = false;
+          self.helpMessage = "";
+          if (!value || value === '') {
+            return true;
+          }
         }
         if (result === true || result.status) {
           self.hasSuccess = true;

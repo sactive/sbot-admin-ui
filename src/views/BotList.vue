@@ -18,7 +18,8 @@
                     <td>{{bot.platform}}</td>
                     <td>{{bot.status}}</td>
                     <td class="botlist-text">
-                        <a :href="bot.restApi" target="_blank" :title="bot.restApi">{{bot.restApi}}</a>
+                        <a v-show="bot.status.toLowerCase() === 'running'" :href="bot.restApi" target="_blank" :title="bot.restApi">{{bot.restApi}}</a>
+                        <p v-show="bot.status.toLowerCase() !== 'running'">{{bot.restApi}}</p>
                     </td>
                     <td>
                         <div class="btn-toolbar" role="toolbar">
@@ -27,11 +28,19 @@
                                     @click="handleContent(bot)"
                                     type="button"
                                     class="btn btn-secondary"
-                                    title="Upload content Package">
+                                    title="Upload content package">
                                 <i class="qtm-font-icon qtm-icon-folder" aria-hidden="true"></i>
                             </button>
                             <button
-                                    :disabled="bot.status.toLowerCase() === 'running' || bot.status.toLowerCase() === 'initializing'"
+                                    :disabled="bot.status.toLowerCase() !== 'running'"
+                                    @click="handleDownloadLog(bot)"
+                                    type="button"
+                                    class="btn btn-secondary"
+                                    title="Download running log">
+                                <i class="qtm-font-icon qtm-icon-download" aria-hidden="true"></i>
+                            </button>
+                            <button
+                                    :disabled="bot.status.toLowerCase() !== 'failed' && bot.status.toLowerCase() !== 'stopped'"
                                     @click="handleEdit(index, $event)"
                                     type="button"
                                     class="btn btn-secondary"
@@ -39,7 +48,15 @@
                                 <i class="qtm-font-icon qtm-icon-edit" aria-hidden="true"></i>
                             </button>
                             <button
-                                    :disabled="bot.status.toLowerCase() === 'initializing' || bot.status.toLowerCase() === 'failed'"
+                                    :disabled="bot.status.toLowerCase() !== 'failed' && bot.status.toLowerCase() !== 'stopped' && bot.status.toLowerCase() !== 'running'"
+                                    @click="handleCopy(index, $event)"
+                                    type="button"
+                                    class="btn btn-secondary"
+                                    title="Copy bot">
+                                <i class="qtm-font-icon qtm-icon-copy" aria-hidden="true"></i>
+                            </button>
+                            <button
+                                    :disabled="bot.status.toLowerCase() === 'initializing' || bot.status.toLowerCase() === 'failed' || bot.status.toLowerCase() === 'stopping'"
                                     @click="toggleBot(bot, index)"
                                     type="button"
                                     class="btn btn-secondary"
@@ -48,7 +65,7 @@
                                 <i v-show="bot.status.toLowerCase() !== 'running'" class="qtm-font-icon qtm-icon-play" aria-hidden="true"></i>
                             </button>
                             <button
-                                    :disabled="bot.status.toLowerCase() === 'initializing'"
+                                    :disabled="bot.status.toLowerCase() === 'initializing' || bot.status.toLowerCase() === 'stopping'"
                                     @click="handleDelete(index, $event)"
                                     type="button"
                                     class="btn btn-secondary"
@@ -101,14 +118,14 @@
                                     @click="handleDownloadPack(pack)"
                                     type="button"
                                     class="btn btn-secondary"
-                                    title="Download content packae">
+                                    title="Download content package">
                                 <i class="qtm-font-icon qtm-icon-download" aria-hidden="true"></i>
                             </button>
                             <button
                                     @click="handleDeletePack(pack, index)"
                                     type="button"
                                     class="btn btn-secondary"
-                                    title="Delete content packae">
+                                    title="Delete content package">
                                 <i class="qtm-font-icon qtm-icon-delete" aria-hidden="true"></i>
                             </button>
                         </div>
@@ -159,7 +176,9 @@
   import {
     uploadFile,
     downloadFile,
-    deleteContent
+    deleteContent,
+    refreshBots,
+    getBotByName
   } from "../api";
 
   export default {
@@ -187,7 +206,8 @@
         bot: {},
         isUpload: false,
         uploadPercent: '0%',
-        uploadResponse: ''
+        uploadResponse: '',
+        watchers: []
       }
     },
     methods: {
@@ -217,9 +237,12 @@
         let result = null;
         if (bot.status.toLowerCase() === 'running') {
           result = await self.$store.dispatch('stopBot', index);
+          bot.status = 'Stopping';
         } else {
           result = await self.$store.dispatch('restartBot', index);
+          bot.status = 'Initializing';
         }
+        self.watchers.push(bot);
       },
       async handleEdit(index, e) {
         let self = this;
@@ -230,7 +253,26 @@
         }
         e.target.removeAttribute("disabled");
         //self.$parent.show = 2;
-        self.$router.push({path: "/sbot/config/add", query: {loginId: $$.getQuery("loginId")}});
+        self.$router.push({path: "/chatops/config/add", query: {loginId: $$.getQuery("loginId")}});
+        self.$store.commit("updateCurrentData", result.data);
+      },
+      async handleCopy(index, e) {
+        let self = this;
+        e.target.setAttribute("disabled", "disabled");
+        let result = await self.$store.dispatch('getBot', {index: index, copy: true});
+        if (result.code !== 200) {
+          return $("#getErrorModel").modal('toggle');
+        }
+        e.target.removeAttribute("disabled");
+        self.$router.push({path: "/chatops/config/add", query: {loginId: $$.getQuery("loginId")}});
+        let platform = result.data.platformPicked;
+        result.data.forms[platform]['HUBOT_NAME'].value = '';
+        let forms = this.$store.state.currentData.forms;
+        for (let key in forms[platform]) {
+          if(forms[platform][key].type === 'password') {
+            result.data.forms[platform][key].value = '';
+          }
+        }
         self.$store.commit("updateCurrentData", result.data);
       },
       async handleContent(bot) {
@@ -277,7 +319,7 @@
         alert(result.data);
       },
       async handleDownloadPack (pack) {
-        let url = `/sbot-chatbot/urest/v1/${pack.platform}/${pack.botname}/content/${pack.filename}`;
+        let url = `/chatops-chatbot/urest/v1/${pack.platform}/${pack.botname}/content/${pack.filename}`;
         await downloadFile(url, pack.filename, pack);
       },
       async upload () {
@@ -296,17 +338,70 @@
         } else {
           self.uploadResponse = `Failed, reason: ${result.data}`;
         }
+        self.file = null;
       },
       getButtonTitle(status) {
         if (status === "running") {
           return "Stop bot";
         }
         return "Start bot";
+      },
+      async handleDownloadLog (bot) {
+        let platform = (bot.platform === "Microsoft Teams" && "msteams") || (bot.platform === "Mattermost" && "mattermost") || (bot.platform === "Slack" && "slack") || bot.platform;
+        let url = `/chatops-chatbot/urest/v1/${platform}/${bot.HUBOT_NAME}/log`;
+        await downloadFile(url, `${bot.HUBOT_NAME}.run.log`, {botname: bot.HUBOT_NAME, platform: platform});
+      },
+      async setWatchers() {
+        let self = this;
+        let result = await refreshBots();
+        self.$store.commit('initBotList', result.data);
+        self.watchers = self.getNotRunningBots(result.data);
+      },
+      async updateWatchBotsStatus() {
+        let self = this;
+        let needUpdateBots = [];
+        let watchersCopy = [];
+        if(self.watchers.length > 0) {
+          let promises = self.watchers.map((bot) => getBotByName(bot.HUBOT_NAME, bot.platform));
+          let results = await Promise.all(promises);
+          $$.each(results, function (result, index) {
+            if (self.watchers[index].status.toLowerCase() !== result.data.status.toLowerCase()) {
+              needUpdateBots.push(result.data);
+            }
+          });
+          $$.each(results, function (result, index) {
+            if (result.data && (result.data.status.toLowerCase() !== 'running' && result.data.status.toLowerCase() !== 'stopped')) {
+              watchersCopy.push(self.watchers[index]);
+            }
+          });
+          self.watchers = watchersCopy;
+          if (needUpdateBots.length > 0) {
+            self.$store.commit('refreshBots', needUpdateBots);
+          }
+        }
+      },
+      getNotRunningBots(botList) {
+        let result = [];
+        $$.each(botList, function (bot) {
+          if(bot.status.toLowerCase() !== 'running' && bot.status.toLowerCase() !== 'stopped') {
+            result.push(bot);
+          }
+        });
+        return result;
       }
     },
     mounted () {
-      this.$store.dispatch('getBotList');
+      let self = this;
+      self.$store.dispatch('getBotList')
+        .then((res) => {
+          self.watchers = self.getNotRunningBots(res.data);
+          setInterval(self.setWatchers, 30 * 60 * 1000);
+          setInterval(self.updateWatchBotsStatus, 8000);
+        });
     }
+//    beforeRouteUpdate() {
+//      this.$store.dispatch('getBotList');
+//    }
   }
 
 </script>

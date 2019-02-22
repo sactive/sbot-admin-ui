@@ -12,6 +12,7 @@ export default {
     if (result.code === 200) {
       commit(INIT_BOT_LIST, result.data);
     }
+    return result;
   },
   async check({commit, state}) {
     return await api.checkConnection(state.currentData);
@@ -37,6 +38,10 @@ export default {
         result.data.step = 2;
         result.data.edit = option.edit;
         result.data.editIndex = option.index;
+      }
+      if(option.copy) {
+        result.data.step = 2;
+        result.data.copy = option.copy;
       }
     }
     return result;

@@ -20,7 +20,8 @@ export function createStore () {
         edit: false,
         editIndex: 0,
         step: 1,
-        forms: getDefaultFormData()
+        forms: getDefaultFormData(),
+        currentChecked: 'autologin'
       },
       requestLoading: false
     },

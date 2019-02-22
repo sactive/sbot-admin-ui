@@ -16,7 +16,7 @@ const store = createStore();
 const router = createRouter();
 
 router.beforeEach((to, from, next) => {
-  if (store.state.currentData.edit) {
+  if (store.state.currentData.edit || store.state.currentData.copy) {
     store.commit("cleanCurrentData");
   }
   next();

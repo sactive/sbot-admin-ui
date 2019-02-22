@@ -6,6 +6,7 @@ const UPDATE_CURRENT_DATA = "updateCurrentData";
 const CLEAN_CURRENT_DATA = "cleanCurrentData";
 const UPDATE_LOADING = "updateLoading";
 const UPDATE_BOT_STATUS = "updateBotStatus";
+const REFRESH_BOTS = "refreshBots";
 
 export {
   INIT_BOT_LIST,
@@ -15,5 +16,6 @@ export {
   UPDATE_CURRENT_DATA,
   CLEAN_CURRENT_DATA,
   UPDATE_LOADING,
-  UPDATE_BOT_STATUS
+  UPDATE_BOT_STATUS,
+  REFRESH_BOTS
 }

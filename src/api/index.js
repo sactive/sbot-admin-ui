@@ -9,11 +9,31 @@ import $$ from "../lib/utils";
 //   });
 // }
 
+async function refreshBots() {
+  return await $$.fetch({
+    method: 'get',
+    url: "/sbot/config/bots",
+    showLoading: false
+  });
+}
+
 async function getBots() {
   return await $$.fetch({
     method: 'get',
     url: "/sbot/config/bots",
     showLoading: true
+  });
+}
+
+async function getBotByName(botName, platform) {
+  let realPlatform = platform.toLowerCase();
+  if(realPlatform === 'microsoft teams') {
+    realPlatform = 'msteams';
+  }
+  return $$.fetch({
+    method: 'get',
+    url: `/sbot/config/bots/${botName}/platform/${realPlatform}`,
+    showLoading: false
   });
 }
 
@@ -26,8 +46,12 @@ async function getBot(index, currentData) {
   let data = {
     forms: {},
     platformPicked: bot.platform,
+    currentChecked: bot.currentChecked,
     step: 1
   };
+  if (bot.platform === 'slack') {
+    data.currentChecked = currentData.currentChecked || 'autologin';
+  }
   data.forms[bot.platform] = {};
   for (let key in currentData.forms[bot.platform]) {
     data.forms[bot.platform][key] = {
@@ -58,9 +82,13 @@ async function checkConnection(currentData) {
 async function deleteBot(index, bots) {
   let botName = bots[index].HUBOT_NAME;
   let platform = bots[index].platform;
+  let realPlatform = platform.toLowerCase();
+  if (realPlatform === 'microsoft teams') {
+    realPlatform = 'msteams';
+  }
   return await $$.fetch({
     method: 'delete',
-    url: `/sbot/config/bots/${botName}/platform/${platform}`,
+    url: `/sbot/config/bots/${botName}/platform/${realPlatform}`,
     showLoading: true
   });
 }
@@ -77,7 +105,9 @@ async function addBot(currentData) {
 
 
   bot.restApi = `/sbot-chatbot/urest/v1/${bot.platform}/${bot.HUBOT_NAME}`;
-
+  if (bot.platform === 'slack') {
+    bot.currentChecked = currentData.currentChecked;
+  }
   return await $$.fetch({
     method: currentData.edit && "put" || "post",
     url: "/sbot/config/bots",
@@ -97,9 +127,10 @@ async function restartBot(index, bots) {
 async function toggleBot(index, bots, status) {
   let botName = bots[index].HUBOT_NAME;
   let platform = bots[index].platform;
+  let realPlatform = platform.toLowerCase();
   return await $$.fetch({
     method: 'put',
-    url: `/sbot/config/bots/${botName}/platform/${platform}`,
+    url: `/sbot/config/bots/${botName}/platform/${realPlatform}`,
     data: {
       status: status
     },
@@ -119,7 +150,8 @@ async function getContents(botData) {
     url: `/sbot-chatbot/urest/v1/${platform}/${bot.HUBOT_NAME}/content`,
     method: 'get',
     headers: {
-      'Authorization': result.data
+      // 'Authorization': result.data,
+      'token': result.data
     },
     showLoading: true
   }).then(function (data) {
@@ -143,7 +175,8 @@ async function deleteContent(pack) {
     url: `/sbot-chatbot/urest/v1/${pack.platform}/${pack.botname}/content/${pack.filename}`,
     method: 'delete',
     headers: {
-      'Authorization': result.data
+      // 'Authorization': result.data,
+      'token': result.data
     },
     showLoading: true
   }).then(function (data) {
@@ -175,7 +208,8 @@ async function uploadFile(file, botData, uploadProgress) {
     data: form,
     headers: {
       'Content-Type': 'multipart/form-data',
-      'Authorization': result.data
+      // 'Authorization': result.data,
+      'token': result.data
     }
   }).then(function (data) {
     return {
@@ -199,7 +233,8 @@ async function downloadFile(url, filename, pack) {
     if (result.code !== 200) {
       return result;
     }
-    opts.headers['Authorization'] = result.data;
+    // opts.headers['Authorization'] = result.data;
+    opts.headers['token'] = result.data;
     opts.headers['Content-Type'] = 'application/gzip';
   }
   return await $$.fetch(opts);
@@ -226,5 +261,7 @@ export {
   getContents,
   uploadFile,
   downloadFile,
-  deleteContent
+  deleteContent,
+  refreshBots,
+  getBotByName
 }

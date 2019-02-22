@@ -7,7 +7,7 @@
 yarn install # or npm install
 
 # serve in dev mode, with hot reload at localhost:8080
-yarn dev # or npm run dev
+yarn start # or npm run start
 
 # build for production
 yarn build # or npm run build
